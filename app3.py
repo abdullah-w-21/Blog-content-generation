@@ -181,12 +181,12 @@ def generate_content(template_text, template_structure, primary_keyword, schema_
             4. Follow EEAT framework
             5. Natural LSI keyword integration
             6. Prioritize user value and clarity
-            7. FAQ's questions starts with Q: and Answer starts with A:
+            7. FAQ's questions starts with (H3: Q:) and Answer starts with (A:)
 
             Output content using H2: and H3: prefixes for headings.
             Ensure that the output is perfect and the headings prefixes are mention (H1,H2,H3).
             """,
-            expected_output="SEO-optimized content following template structure with proper heading hierarchy with (H1:,H2:,H3:) prefixes for headings. Output should only consist of the content.",
+            expected_output="SEO-optimized content following template structure with proper heading hierarchy with (H1:,H2:,H3:) prefixes for headings. Output should only consist of the content along with their markdown.",
             agent=writer
         )
 
@@ -324,7 +324,7 @@ def regenerate_component(component_type, template_text, template_structure, prim
         # Writing task with template insights
         writing_task = Task(
             description=f"""
-                   Generate content using this template analysis:
+                  Generate content using this template analysis:
             {template_analysis}
 
             Primary Keyword: {primary_keyword}
@@ -339,12 +339,12 @@ def regenerate_component(component_type, template_text, template_structure, prim
             4. Follow EEAT framework
             5. Natural LSI keyword integration
             6. Prioritize user value and clarity
-            7. FAQ's questions starts with Q: and Answer starts with A:
+            7. FAQ's questions starts with (H3: Q:) and Answer starts with (A:)
 
             Output content using H2: and H3: prefixes for headings.
             Ensure that the output is perfect and the headings prefixes are mention (H1,H2,H3).
             """,
-            expected_output="SEO-optimized content following template structure with proper heading hierarchy with (H1:,H2:,H3:) prefixes for headings. Output should only consist of the content.",
+            expected_output="SEO-optimized content following template structure with proper heading hierarchy with (H1:,H2:,H3:) prefixes for headings. Output should only consist of the content along with their markdown.",
             agent=writer
         )
 
