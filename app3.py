@@ -154,6 +154,8 @@ def generate_content(template_text, template_structure, primary_keyword, schema_
             4. Recommended approach for content creation
             5. Pay close attention to the use of headings (H1, H2, H3) and how they organize the information.
             6. The number of FAQ's
+            7. FAQ's questions starts with Q: and Answer starts with A:
+            8. Number of H2 and H3 and their arrangement remember that.
             """,
             expected_output="Detailed template analysis with structural insights and content recommendations",
             agent=template_analyzer
@@ -182,6 +184,7 @@ def generate_content(template_text, template_structure, primary_keyword, schema_
             6. Prioritize user value and clarity
 
             Output content using H2: and H3: prefixes for headings.
+            Ensure that the output is perfect and the headings prefixes are mention (H1,H2,H3).
             """,
             expected_output="SEO-optimized content following template structure with proper heading hierarchy with (H1:,H2:,H3:) prefixes for headings.",
             agent=writer
