@@ -6,3 +6,4 @@ crewai~=0.86.0
 langchain-openai~=0.2.14
 pipdeptree
 duckdb==0.10.0
+duckdb-engine
