@@ -3,6 +3,7 @@ import pandas as pd
 from docx import Document
 import json
 import os
+os.environ["CHROMA_DB_IMPL"] = st.secrets["CHROMA_DB_IMPL"]
 from crewai import Agent, Task, Crew, Process
 from textwrap import dedent
 from io import BytesIO
