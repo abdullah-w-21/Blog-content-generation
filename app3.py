@@ -155,7 +155,6 @@ def generate_content(template_text, template_structure, primary_keyword, schema_
             5. Pay close attention to the use of headings (H1, H2, H3) and how they organize the information.
             6. The number of FAQ's
             7. FAQ's questions starts with Q: and Answer starts with A:
-            8. Number of H2 and H3 and their arrangement remember that.
             """,
             expected_output="Detailed template analysis with structural insights and content recommendations",
             agent=template_analyzer
@@ -182,11 +181,12 @@ def generate_content(template_text, template_structure, primary_keyword, schema_
             4. Follow EEAT framework
             5. Natural LSI keyword integration
             6. Prioritize user value and clarity
+            7. FAQ's questions starts with Q: and Answer starts with A:
 
             Output content using H2: and H3: prefixes for headings.
             Ensure that the output is perfect and the headings prefixes are mention (H1,H2,H3).
             """,
-            expected_output="SEO-optimized content following template structure with proper heading hierarchy with (H1:,H2:,H3:) prefixes for headings.",
+            expected_output="SEO-optimized content following template structure with proper heading hierarchy with (H1:,H2:,H3:) prefixes for headings. Output should only consist of the content.",
             agent=writer
         )
 
@@ -301,18 +301,19 @@ def regenerate_component(component_type, template_text, template_structure, prim
 
         analysis_task = Task(
             description=f"""
-                    Analyze this content template and create a detailed outline:
-                    Template Structure: {json.dumps(template_structure)}
-                    Original Text: {template_text}
+                   Analyze this content template and create a detailed outline:
+            Template Structure: {json.dumps(template_structure)}
+            Original Text: {template_text}
 
-                    Create a detailed analysis of:
-                    1. Content flow and structure
-                    2. Key sections and their purposes
-                    3. Content patterns and relationships
-                    4. Recommended approach for content creation
-                    5. Pay close attention to the use of headings (H1, H2, H3) and how they organize the information.
-                    6. The number of FAQ's
-                    """,
+            Create a detailed analysis of:
+            1. Content flow and structure
+            2. Key sections and their purposes
+            3. Content patterns and relationships
+            4. Recommended approach for content creation
+            5. Pay close attention to the use of headings (H1, H2, H3) and how they organize the information.
+            6. The number of FAQ's
+            7. FAQ's questions starts with Q: and Answer starts with A:
+            """,
             expected_output="Detailed template analysis with structural insights and content recommendations",
             agent=template_analyzer
         )
@@ -323,25 +324,27 @@ def regenerate_component(component_type, template_text, template_structure, prim
         # Writing task with template insights
         writing_task = Task(
             description=f"""
-                    Generate content using this template analysis:
-                    {template_analysis}
+                   Generate content using this template analysis:
+            {template_analysis}
 
-                    Primary Keyword: {primary_keyword}
-                    Service Name: {service_name if service_name else 'Not specified'}
-                    Additional Keywords: {', '.join(additional_keywords) if additional_keywords else 'None'}
+            Primary Keyword: {primary_keyword}
+            Service Name: {service_name if service_name else 'Not specified'}
+            Additional Keywords: {', '.join(additional_keywords) if additional_keywords else 'None'}
 
-                    Generate SEO Optimized high-quality, informative, and trustworthy content for Nao Medical, a leading healthcare provider in NYC with over 11 facilities. 
-                    Requirements:
-                    1. Follow provided template structure exactly
-                    2. Use H2: and H3: prefix for headings
-                    3. Word count: 1700-1800 so it ranks on google
-                    4. Follow EEAT framework
-                    5. Natural LSI keyword integration
-                    6. Prioritize user value and clarity
+            Generate SEO Optimized high-quality, informative, and trustworthy content for Nao Medical, a leading healthcare provider in NYC with over 11 facilities. 
+            Requirements:
+            1. Follow provided template structure exactly
+            2. Use H2: and H3: prefix for headings
+            3. Word count: 1700-1800 so it ranks on google
+            4. Follow EEAT framework
+            5. Natural LSI keyword integration
+            6. Prioritize user value and clarity
+            7. FAQ's questions starts with Q: and Answer starts with A:
 
-                    Output content using H2: and H3: prefixes for headings. 
-                    """,
-            expected_output="SEO-optimized content following template structure with proper heading hierarchy with (H1:,H2:,H3:) prefixes for headings.",
+            Output content using H2: and H3: prefixes for headings.
+            Ensure that the output is perfect and the headings prefixes are mention (H1,H2,H3).
+            """,
+            expected_output="SEO-optimized content following template structure with proper heading hierarchy with (H1:,H2:,H3:) prefixes for headings. Output should only consist of the content.",
             agent=writer
         )
 
@@ -373,7 +376,7 @@ def regenerate_component(component_type, template_text, template_structure, prim
                     SCHEMA:
                     [complete schema markup with FAQs schema]
                     """,
-            expected_output="SEO metadata including title, meta description, and complete schema markup with FAQs schema",
+            expected_output="SEO metadata including title, meta description, and complete schema markup with FAQs schema.",
             agent=seo_specialist
         )
         seo_result = seo_specialist.execute_task(seo_task)
