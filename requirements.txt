@@ -5,5 +5,5 @@ python-docx~=1.1.2
 crewai~=0.86.0
 langchain-openai~=0.2.14
 pipdeptree
-duckdb==0.10.0
-duckdb-engine
+pysqlite3-binary
+chromadb
