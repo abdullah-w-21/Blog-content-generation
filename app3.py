@@ -210,9 +210,9 @@ def generate_content(template_text, template_structure, primary_keyword, schema_
             TITLE: [title]
             META: [description]
             SCHEMA:
-            [complete schema markup with FAQs schema]
+            [complete meta tags and schema markup with FAQs schema]
             """,
-            expected_output="SEO metadata including title, meta description, and complete schema markup with FAQs schema",
+            expected_output="SEO metadata including title, meta description, and complete meta tags and schema markup with FAQs schema",
             agent=seo_specialist
         )
 
@@ -374,9 +374,9 @@ def regenerate_component(component_type, template_text, template_structure, prim
                     TITLE: [title]
                     META: [description]
                     SCHEMA:
-                    [complete schema markup with FAQs schema]
+                    [complete meta tags and schema markup with FAQs schema]
                     """,
-            expected_output="SEO metadata including title, meta description, and complete schema markup with FAQs schema.",
+            expected_output="SEO metadata including title, meta description, and complete meta tags and schema markup with FAQs schema.",
             agent=seo_specialist
         )
         seo_result = seo_specialist.execute_task(seo_task)
