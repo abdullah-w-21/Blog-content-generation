@@ -405,6 +405,8 @@ def regenerate_callback(component_type):
                                           st.session_state.service_name,
                                           additional_keywords_list)
             st.session_state.generation_content.update(result)
+            # Update edited content as well
+            st.session_state.edited_content = result.get('content', st.session_state.edited_content)
             st.rerun()  # Force rerun after update
 
         elif component_type == 'seo':
@@ -417,16 +419,32 @@ def regenerate_callback(component_type):
                                           additional_keywords_list,
                                           st.session_state.generation_content['content'])
             st.session_state.generation_content.update(result)
+            # Update edited SEO as well
+            st.session_state.edited_seo.update({
+                'title': result.get('title', st.session_state.edited_seo.get('title', '')),
+                'meta_description': result.get('meta_description',
+                                               st.session_state.edited_seo.get('meta_description', '')),
+                'schema': result.get('schema', st.session_state.edited_seo.get('schema', {}))
+            })
             st.rerun()  # Force rerun after update
 
-        else:
-            st.session_state.generation_content = generate_content(
+        else:  # regenerate all
+            result = generate_content(
                 st.session_state.template_text,
                 st.session_state.template_structure,
                 st.session_state.primary_keyword,
                 st.session_state.schema_template,
                 st.session_state.service_name,
                 additional_keywords_list)
+
+            # Update both generation content and edited states
+            st.session_state.generation_content = result
+            st.session_state.edited_content = result['content']
+            st.session_state.edited_seo = {
+                'title': result['title'],
+                'meta_description': result['meta_description'],
+                'schema': result['schema']
+            }
             st.rerun()  # Force rerun after update
 
 
@@ -435,18 +453,102 @@ def save_to_csv(data):
     return df.to_csv(index=False).encode('utf-8')
 
 
+def expand_content(selected_text, primary_keyword):
+    """Function to expand selected content using GPT-4 directly"""
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.7)
+
+    prompt = f"""
+    Expand and enhance this content while maintaining the same style and tone:
+    {selected_text}
+
+    Primary Keyword: {primary_keyword}
+
+    Requirements:
+    1. Maintain the same style and format
+    2. Add more detailed information and examples
+    3. Keep SEO optimization in mind
+    4. Ensure natural flow with surrounding content
+    5. Keep the same heading format if present (H1:, H2:, H3:)
+    """
+
+    response = llm.invoke(prompt)
+    return response.content
+
+
+def count_words(text):
+    """Count words in text, excluding heading markers"""
+    # Remove heading markers (H1:, H2:, H3:)
+    cleaned_text = text.replace('H1:', '').replace('H2:', '').replace('H3:', '')
+    return len(cleaned_text.split())
+
+
 def main():
+    # Initialize session states
     if 'form_submitted' not in st.session_state:
         st.session_state.form_submitted = False
     if 'template_doc_content' not in st.session_state:
         st.session_state.template_doc_content = None
+    if 'edited_content' not in st.session_state:
+        st.session_state.edited_content = None
+    if 'edited_seo' not in st.session_state:
+        st.session_state.edited_seo = {}
+    if 'generation_content' not in st.session_state:
+        st.session_state.generation_content = None
 
     st.title("Content Generation App")
+
+    with st.expander("ℹ️ About v2.0 Updates"):
+        st.markdown("""
+        ### 🆕 New Features in v2.0
+        
+        #### Content Management
+        - **Original Content View**: Always visible generated content
+        - **Content Editor**: Expandable editor for making changes
+        - **Word Count**: Real-time word count tracking
+        - **Content Expansion**: Ability to expand specific sections using AI
+        
+        #### Editor Features
+        - 📝 Edit content while preserving original
+        - 💾 Save changes independently
+        - 🔄 Auto-sync with regenerated content
+        - 📊 Real-time word count updates
+        
+        #### SEO Tools
+        - 🎯 Enhanced SEO metadata editor
+        - ✍️ Title character counter (60 char limit)
+        - 📑 Meta description counter (160 char limit)
+        - 🔧 JSON schema validation
+        
+        #### Regeneration Options
+        - 🔄 Regenerate content only
+        - 🎯 Regenerate SEO only
+        - ⚡ Regenerate everything
+        
+        #### File Management
+        - 📦 Download all files as ZIP
+        - 📄 Individual file downloads
+        - 💾 Auto-save of edited versions
+        
+        #### How to Use
+        1. Generate initial content
+        2. View generated content at the top
+        3. Use the Content Editor expander to make changes
+        4. Expand sections using AI assistance
+        5. Edit SEO metadata in the SEO expander
+        6. Download your preferred file format
+        
+        #### Tips
+        - Use the content expander for major edits
+        - Save changes before regenerating
+        - Monitor word count for optimal SEO
+        - Validate schema before saving
+        """)
 
     if not configure_openai():
         st.warning("Please enter your OpenAI API key in the sidebar.")
         return
 
+    # Initial form for content generation
     if not st.session_state.form_submitted:
         with st.form("content_form"):
             template_doc = st.file_uploader("Upload template Word document", type=['docx'])
@@ -471,10 +573,13 @@ def main():
                 st.session_state.form_submitted = True
                 st.rerun()
 
+    # Content generation and editing interface
     if st.session_state.form_submitted:
         if st.button("← Back to Form"):
             st.session_state.form_submitted = False
             st.session_state.generation_content = None
+            st.session_state.edited_content = None
+            st.session_state.edited_seo = {}
             st.rerun()
 
         progress_tab, output_tab = st.tabs(["Generation Progress", "Final Output"])
@@ -501,7 +606,14 @@ def main():
                         additional_keywords_list
                     )
 
+                    # Update both generation and edited content
                     st.session_state.generation_content = result
+                    st.session_state.edited_content = result['content']
+                    st.session_state.edited_seo = {
+                        'title': result['title'],
+                        'meta_description': result['meta_description'],
+                        'schema': result['schema']
+                    }
                     progress_bar.progress(100)
                     status.text("Generation complete!")
 
@@ -511,6 +623,7 @@ def main():
 
         with output_tab:
             if st.session_state.generation_content:
+                # Regeneration buttons
                 col1, col2, col3 = st.columns(3)
                 with col1:
                     st.button("🔄 Regenerate Content", on_click=regenerate_callback, args=('content',),
@@ -520,31 +633,110 @@ def main():
                 with col3:
                     st.button("🔄 Regenerate All", on_click=regenerate_callback, args=('all',), key='btn_all')
 
+                # Original Content View
                 st.subheader("📄 Generated Content")
                 st.markdown(st.session_state.generation_content['content'])
 
-                with st.expander("📊 SEO Metadata"):
-                    st.write("Title:", st.session_state.generation_content['title'])
-                    st.write("Meta Description:", st.session_state.generation_content['meta_description'])
-                    st.write("Schema:", st.session_state.generation_content['schema'])
+                # Content Editor in Expander
+                with st.expander("📝 Content Editor"):
+                    edited_content = st.text_area(
+                        "Edit Generated Content",
+                        value=st.session_state.edited_content,
+                        height=500,
+                        key="content_editor"
+                    )
 
+                    # Word Count Display
+                    word_count = count_words(edited_content)
+                    st.metric("Word Count", word_count)
+
+                    # Save content changes
+                    if st.button("Save Content Changes", key="save_content_btn"):
+                        st.session_state.edited_content = edited_content
+                        st.success("Content changes saved successfully!")
+
+                # Content Expansion Feature
+                with st.expander("✨ Expand Selected Content"):
+                    selected_text = st.text_area(
+                        "Paste the section you want to expand",
+                        height=200,
+                        key="expansion_input"
+                    )
+                    if st.button("Expand Content", key="expand_content_btn") and selected_text:
+                        with st.spinner("Expanding content..."):
+                            expanded_text = expand_content(
+                                selected_text,
+                                st.session_state.primary_keyword
+                            )
+                            st.text_area(
+                                "Expanded Content (Copy and paste back to main editor)",
+                                value=expanded_text,
+                                height=300,
+                                key="expanded_output"
+                            )
+
+                # SEO Metadata Editor
+                with st.expander("📊 SEO Metadata Editor"):
+                    edited_title = st.text_input(
+                        "SEO Title",
+                        value=st.session_state.edited_seo.get('title', ''),
+                        max_chars=60,
+                        help="Maximum 60 characters",
+                        key="seo_title_input"
+                    )
+                    st.caption(f"Character count: {len(edited_title)}/60")
+
+                    edited_meta = st.text_area(
+                        "Meta Description",
+                        value=st.session_state.edited_seo.get('meta_description', ''),
+                        max_chars=160,
+                        help="Maximum 160 characters",
+                        key="seo_meta_input"
+                    )
+                    st.caption(f"Character count: {len(edited_meta)}/160")
+
+                    edited_schema = st.text_area(
+                        "Schema Markup",
+                        value=json.dumps(st.session_state.edited_seo.get('schema', {}), indent=2),
+                        height=300,
+                        key="seo_schema_input"
+                    )
+
+                    if st.button("Save SEO Changes", key="save_seo_btn"):
+                        try:
+                            schema_dict = json.loads(edited_schema)
+                            st.session_state.edited_seo = {
+                                'title': edited_title,
+                                'meta_description': edited_meta,
+                                'schema': schema_dict
+                            }
+                            st.success("SEO changes saved successfully!")
+                        except json.JSONDecodeError:
+                            st.error("Invalid JSON in schema markup")
+
+                # Save content changes
+                if st.button("Save Content Changes"):
+                    st.session_state.edited_content = edited_content
+                    st.success("Content changes saved successfully!")
+
+                # Template Analysis
                 with st.expander("🔍 Template Analysis"):
                     st.write(st.session_state.generation_content['template_analysis'])
 
-                # Create download options
+                # Download Section
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
-                # Prepare files
-                doc = create_word_doc(st.session_state.generation_content['word_content'])
+                # Prepare files using edited content
+                doc = create_word_doc(st.session_state.edited_content)
                 word_buffer = BytesIO()
                 doc.save(word_buffer)
                 word_buffer.seek(0)
 
                 csv_buffer = BytesIO()
                 csv_buffer.write(save_to_csv({
-                    'title': st.session_state.generation_content['title'],
-                    'meta_description': st.session_state.generation_content['meta_description'],
-                    'schema': json.dumps(st.session_state.generation_content['schema'])
+                    'title': st.session_state.edited_seo['title'],
+                    'meta_description': st.session_state.edited_seo['meta_description'],
+                    'schema': json.dumps(st.session_state.edited_seo['schema'])
                 }))
                 csv_buffer.seek(0)
 
@@ -553,10 +745,11 @@ def main():
                 with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
                     zf.writestr(f'content_{timestamp}.docx', word_buffer.getvalue())
                     zf.writestr(f'content_{timestamp}.md',
-                                st.session_state.generation_content['content'].encode('utf-8'))
+                                st.session_state.edited_content.encode('utf-8'))
                     zf.writestr(f'metadata_{timestamp}.csv', csv_buffer.getvalue())
                 zip_buffer.seek(0)
 
+                # Download buttons
                 col1, col2 = st.columns([2, 1])
                 with col1:
                     st.download_button(
@@ -569,14 +762,18 @@ def main():
 
                 with col2:
                     with st.expander("Download Individual Files"):
-                        st.download_button("📥 Download Word", word_buffer.getvalue(),
+                        st.download_button("📥 Download Word",
+                                           word_buffer.getvalue(),
                                            f"content_{timestamp}.docx",
                                            "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
                         st.download_button("📥 Download Markdown",
-                                           st.session_state.generation_content['content'],
-                                           f"content_{timestamp}.md", "text/markdown")
-                        st.download_button("📥 Download Metadata", csv_buffer.getvalue(),
-                                           f"metadata_{timestamp}.csv", "text/csv")
+                                           st.session_state.edited_content,
+                                           f"content_{timestamp}.md",
+                                           "text/markdown")
+                        st.download_button("📥 Download Metadata",
+                                           csv_buffer.getvalue(),
+                                           f"metadata_{timestamp}.csv",
+                                           "text/csv")
 
 
 if __name__ == "__main__":
