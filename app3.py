@@ -148,7 +148,7 @@ def generate_content(template_text, template_structure, primary_keyword, schema_
             Original Text: {template_text}
 
             Create a detailed analysis of:
-            1. Content flow and structure
+            1. Content flow and exact structure
             2. Key sections and their purposes
             3. Content patterns and relationships
             4. Recommended approach for content creation
@@ -176,7 +176,7 @@ def generate_content(template_text, template_structure, primary_keyword, schema_
 
             Generate SEO Optimized high-quality, informative, and trustworthy content for Nao Medical, a leading healthcare provider in NYC with over 11 facilities. 
             Requirements:
-            1. Follow provided template structure exactly (include the address if exists)
+            1. Follow provided template structure exactly and accurately (include the address if exists)
             2. Use H2: and H3: prefix for headings
             3. Word count: 1700-1800 so it ranks on google
             4. Follow EEAT framework
@@ -302,12 +302,12 @@ def regenerate_component(component_type, template_text, template_structure, prim
 
         analysis_task = Task(
             description=f"""
-                   Analyze this content template and create a detailed outline:
+            Analyze this content template and create a detailed outline:
             Template Structure: {json.dumps(template_structure)}
             Original Text: {template_text}
 
             Create a detailed analysis of:
-            1. Content flow and structure
+            1. Content flow and exact structure
             2. Key sections and their purposes
             3. Content patterns and relationships
             4. Recommended approach for content creation
@@ -325,8 +325,8 @@ def regenerate_component(component_type, template_text, template_structure, prim
 
         # Writing task with template insights
         writing_task = Task(
-            description=f"""
-                  Generate content using this template analysis:
+           description=f"""
+            Generate content using this template analysis:
             {template_analysis}
 
             Primary Keyword: {primary_keyword}
@@ -335,7 +335,7 @@ def regenerate_component(component_type, template_text, template_structure, prim
 
             Generate SEO Optimized high-quality, informative, and trustworthy content for Nao Medical, a leading healthcare provider in NYC with over 11 facilities. 
             Requirements:
-            1. Follow provided template structure exactly (include the address if exists)
+            1. Follow provided template structure exactly and accurately (include the address if exists)
             2. Use H2: and H3: prefix for headings
             3. Word count: 1700-1800 so it ranks on google
             4. Follow EEAT framework
