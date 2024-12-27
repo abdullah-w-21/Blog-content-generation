@@ -152,9 +152,10 @@ def generate_content(template_text, template_structure, primary_keyword, schema_
             2. Key sections and their purposes
             3. Content patterns and relationships
             4. Recommended approach for content creation
-            5. Pay close attention to the use of headings (H1, H2, H3) and how they organize the information.
-            6. The number of FAQ's
-            7. FAQ's questions starts with Q: and Answer starts with A:
+            5. The address details mentioned in the content remember it.
+            6. Pay close attention to the use of headings (H1, H2, H3) and how they organize the information.
+            7. The number of FAQ's
+            8. FAQ's questions starts with Q: and Answer starts with A:
             """,
             expected_output="Detailed template analysis with structural insights and content recommendations",
             agent=template_analyzer
@@ -175,7 +176,7 @@ def generate_content(template_text, template_structure, primary_keyword, schema_
 
             Generate SEO Optimized high-quality, informative, and trustworthy content for Nao Medical, a leading healthcare provider in NYC with over 11 facilities. 
             Requirements:
-            1. Follow provided template structure exactly
+            1. Follow provided template structure exactly (include the address if exists)
             2. Use H2: and H3: prefix for headings
             3. Word count: 1700-1800 so it ranks on google
             4. Follow EEAT framework
@@ -310,9 +311,10 @@ def regenerate_component(component_type, template_text, template_structure, prim
             2. Key sections and their purposes
             3. Content patterns and relationships
             4. Recommended approach for content creation
-            5. Pay close attention to the use of headings (H1, H2, H3) and how they organize the information.
-            6. The number of FAQ's
-            7. FAQ's questions starts with Q: and Answer starts with A:
+            5. The address details mentioned in the content remember it.
+            6. Pay close attention to the use of headings (H1, H2, H3) and how they organize the information.
+            7. The number of FAQ's
+            8. FAQ's questions starts with Q: and Answer starts with A:
             """,
             expected_output="Detailed template analysis with structural insights and content recommendations",
             agent=template_analyzer
@@ -333,7 +335,7 @@ def regenerate_component(component_type, template_text, template_structure, prim
 
             Generate SEO Optimized high-quality, informative, and trustworthy content for Nao Medical, a leading healthcare provider in NYC with over 11 facilities. 
             Requirements:
-            1. Follow provided template structure exactly
+            1. Follow provided template structure exactly (include the address if exists)
             2. Use H2: and H3: prefix for headings
             3. Word count: 1700-1800 so it ranks on google
             4. Follow EEAT framework
