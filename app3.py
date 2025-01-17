@@ -791,83 +791,88 @@ def main():
                                            csv_buffer.getvalue(),
                                            f"metadata_{timestamp}.csv",
                                            "text/csv")
-                with st.expander("🌐 Generate HTML"):
-                    try:
-                        # Single option dropdown for service page
-                        page_type = st.selectbox(
-                            "Select Page Type",
-                            options=['service page'],
-                            key="page_type_select"
-                        )
-                        
-                        # Site name input
-                        site_name = st.text_input(
-                            "Enter Site Name",
-                            key="site_name_input"
-                        )
-                        
-                        debug_print(f"Page Type: {page_type}")
-                        debug_print(f"Site Name: {site_name}")
-                        
-                        # Generate HTML button
-                        if st.button("Generate HTML", key="generate_html_btn"):
-                            if page_type and site_name:
-                                try:
-                                    debug_print("Creating CSV data...")
-                                    # Create CSV data
-                                    csv_data = {
-                                        'TITLE': [st.session_state.edited_seo.get('title', '')],
-                                        'META_DESC': [st.session_state.edited_seo.get('meta_description', '')],
-                                        'FAQ_SCHEMA': [json.dumps(st.session_state.edited_seo.get('schema', {}))],
-                                        'CONTENT': [st.session_state.edited_content],
-                                        'H2': [site_name]
-                                    }
+                
+            with st.expander("🌐 Generate HTML"):
+                try:
+                    page_type = st.selectbox(
+                        "Select Page Type",
+                        options=['service page'],
+                        key="page_type_select"
+                    )
+                    
+                    site_name = st.text_input(
+                        "Enter Site Name",
+                        key="site_name_input",
+                        help="Make sure you have the corresponding template file (example: astoria-template.html) in your directory"
+                    )
+                    
+                    # Check for template file before proceeding
+                    if site_name:
+                        template_file = f"{site_name.lower()}-template.html"
+                        if not os.path.exists(template_file):
+                            st.error(f"Template file '{template_file}' not found in the current directory. Please make sure the template file exists.")
+                            st.info("Required template files should be named like: 'astoria-template.html', 'williamsburg-template.html', etc.")
+                            debug_print(f"Looking for template file in: {os.getcwd()}")
+                            debug_print(f"Files in current directory: {os.listdir()}")
+                    
+                    if st.button("Generate HTML", key="generate_html_btn"):
+                        if page_type and site_name:
+                            template_file = f"{site_name.lower()}-template.html"
+                            if not os.path.exists(template_file):
+                                st.error(f"Cannot proceed: Template file '{template_file}' not found.")
+                                return
+                                
+                            try:
+                                debug_print("Creating CSV data...")
+                                csv_data = {
+                                    'TITLE': [st.session_state.edited_seo.get('title', '')],
+                                    'META_DESC': [st.session_state.edited_seo.get('meta_description', '')],
+                                    'FAQ_SCHEMA': [json.dumps(st.session_state.edited_seo.get('schema', {}))],
+                                    'CONTENT': [st.session_state.edited_content],
+                                    'H2': [site_name]
+                                }
+                                
+                                # Create a temporary CSV file
+                                with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.csv', newline='') as temp_csv:
+                                    debug_print(f"Created temporary file: {temp_csv.name}")
+                                    df = pd.DataFrame(csv_data)
+                                    df.to_csv(temp_csv.name, index=False)
+                                    debug_print(f"CSV Content Preview: {df.head()}")
+                                
+                                debug_print("Calling generate_filled_html...")
+                                template_name = site_name.lower()
+                                generate_filled_html(temp_csv.name, template_name)
+                                
+                                output_filename = f"{template_name}.html"
+                                if os.path.exists(output_filename):
+                                    with open(output_filename, 'r', encoding='utf-8') as f:
+                                        html_content = f.read()
                                     
-                                    # Create a temporary CSV file
-                                    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.csv', newline='') as temp_csv:
-                                        debug_print(f"Created temporary file: {temp_csv.name}")
-                                        pd.DataFrame(csv_data).to_csv(temp_csv.name, index=False)
+                                    st.download_button(
+                                        "📥 Download Generated HTML",
+                                        html_content,
+                                        f"{template_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html",
+                                        "text/html"
+                                    )
                                     
-                                    debug_print("Calling generate_filled_html...")
-                                    # Generate the HTML
-                                    template_name = site_name.lower()
-                                    generate_filled_html(temp_csv.name, template_name)
+                                    # Clean up
+                                    os.remove(output_filename)
+                                    os.remove(temp_csv.name)
+                                    st.success("HTML generated successfully!")
+                                else:
+                                    st.error(f"Output file {output_filename} was not created")
                                     
-                                    debug_print("Reading generated HTML...")
-                                    # Read the generated HTML file
-                                    output_filename = f"{template_name}.html"
-                                    if os.path.exists(output_filename):
-                                        with open(output_filename, 'r', encoding='utf-8') as f:
-                                            html_content = f.read()
-                                        
-                                        debug_print("Creating download button...")
-                                        # Create download button
-                                        st.download_button(
-                                            "📥 Download Generated HTML",
-                                            html_content,
-                                            f"{template_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html",
-                                            "text/html"
-                                        )
-                                        
-                                        # Clean up
-                                        os.remove(output_filename)
-                                        os.remove(temp_csv.name)
-                                        st.success("HTML generated successfully!")
-                                    else:
-                                        st.error(f"Output file {output_filename} was not created")
-                                        
-                                except Exception as e:
-                                    st.error(f"Error generating HTML: {str(e)}")
-                                    st.write(traceback.format_exc())
-                                finally:
-                                    # Ensure temporary file is cleaned up
-                                    if 'temp_csv' in locals() and os.path.exists(temp_csv.name):
-                                        os.remove(temp_csv.name)
-                            else:
-                                st.warning("Please select a page type and enter a site name.")
-                    except Exception as e:
-                        st.error(f"Error in HTML generation section: {str(e)}")
-                        st.write(traceback.format_exc())
+                            except Exception as e:
+                                st.error(f"Error generating HTML: {str(e)}")
+                                st.write(traceback.format_exc())
+                            finally:
+                                if 'temp_csv' in locals() and os.path.exists(temp_csv.name):
+                                    os.remove(temp_csv.name)
+                        else:
+                            st.warning("Please select a page type and enter a site name.")
+                except Exception as e:
+                    st.error(f"Error in HTML generation section: {str(e)}")
+                    st.write(traceback.format_exc())
 
 if __name__ == "__main__":
     main()
