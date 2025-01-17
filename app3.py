@@ -8,18 +8,22 @@ import json
 import os
 from crewai import Agent, Task, Crew, Process
 from textwrap import dedent
-from io import BytesIO
 from langchain_openai import ChatOpenAI
 from datetime import datetime
 import zipfile
 import pandas as pd
-from io import BytesIO
+from io import BytesIO, StringIO
+import traceback
 from datetime import datetime
 import os
 from automation import generate_filled_html
 
 
 # Session state initialization
+if 'page_type' not in st.session_state:
+    st.session_state.page_type = None
+if 'site_name' not in st.session_state:
+    st.session_state.site_name = None
 if 'template_text' not in st.session_state:
     st.session_state.template_text = None
 if 'template_structure' not in st.session_state:
@@ -34,11 +38,10 @@ if 'additional_keywords_list' not in st.session_state:
     st.session_state.additional_keywords_list = None
 if 'generation_content' not in st.session_state:
     st.session_state.generation_content = None
-# Added
-if 'page_type' not in st.session_state:
-    st.session_state.page_type = None
-if 'site_name' not in st.session_state:
-    st.session_state.site_name = None
+
+
+
+
 def debug_print(message):
     """Print debug messages in Streamlit"""
     st.write(f"Debug: {message}")
@@ -855,12 +858,13 @@ def main():
                                         
                                 except Exception as e:
                                     st.error(f"Error generating HTML: {str(e)}")
-                                    debug_print(traceback.format_exc())
+                                    st.write(traceback.format_exc())
                             else:
                                 st.warning("Please select a page type and enter a site name.")
                     except Exception as e:
                         st.error(f"Error in HTML generation section: {str(e)}")
-                        debug_print(traceback.format_exc())
+                        st.write(traceback.format_exc())
+
 if __name__ == "__main__":
     main()
 
