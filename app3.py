@@ -787,14 +787,14 @@ def main():
                                            "text/csv")
                 with st.expander("🌐 Generate HTML"):
                 # Single option dropdown for service page
-                page_type = st.selectbox(
+                    page_type = st.selectbox(
                     "Select Page Type",
                     options=['service page'],
                     key="page_type_select"
                 )
                 
                 # Site name input
-                site_name = st.text_input(
+                    site_name = st.text_input(
                     "Enter Site Name",
                     key="site_name_input"
                 )
