@@ -786,61 +786,79 @@ def main():
                                            f"metadata_{timestamp}.csv",
                                            "text/csv")
                 with st.expander("🌐 Generate HTML"):
-                # Single option dropdown for service page
-                    page_type = st.selectbox(
-                    "Select Page Type",
-                    options=['service page'],
-                    key="page_type_select"
-                )
-                
-                # Site name input
-                    site_name = st.text_input(
-                    "Enter Site Name",
-                    key="site_name_input"
-                )
-                
-                # Generate HTML button
-                if st.button("Generate HTML", key="generate_html_btn"):
-                    if page_type and site_name:
-                        try:
-                            # Create a temporary CSV file with the required data
-                            csv_data = {
-                                'TITLE': [st.session_state.edited_seo.get('title', '')],
-                                'META_DESC': [st.session_state.edited_seo.get('meta_description', '')],
-                                'FAQ_SCHEMA': [json.dumps(st.session_state.edited_seo.get('schema', {}))],
-                                'CONTENT': [st.session_state.edited_content],
-                                'H2': [site_name]  # Using site_name as H2
-                            }
-                            
-                            temp_csv = BytesIO()
-                            pd.DataFrame(csv_data).to_csv(temp_csv, index=False)
-                            temp_csv.seek(0)
-                            
-                            # Generate the HTML using the site name
-                            generate_filled_html(temp_csv, site_name.lower())
-                            
-                            # Read the generated HTML file
-                            with open(f"{site_name.lower()}.html", 'r', encoding='utf-8') as f:
-                                html_content = f.read()
-                            
-                            # Create download button for the HTML
-                            st.download_button(
-                                "📥 Download Generated HTML",
-                                html_content,
-                                f"{site_name.lower()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html",
-                                "text/html"
-                            )
-                            
-                            # Clean up the generated file
-                            os.remove(f"{site_name.lower()}.html")
-                            
-                            st.success("HTML generated successfully!")
-                            
-                        except Exception as e:
-                            st.error(f"Error generating HTML: {str(e)}")
-                    else:
-                        st.warning("Please select a page type and enter a site name.")
-
+                    try:
+                        # Single option dropdown for service page
+                        page_type = st.selectbox(
+                            "Select Page Type",
+                            options=['service page'],
+                            key="page_type_select"
+                        )
+                        
+                        # Site name input
+                        site_name = st.text_input(
+                            "Enter Site Name",
+                            key="site_name_input"
+                        )
+                        
+                        debug_print(f"Page Type: {page_type}")
+                        debug_print(f"Site Name: {site_name}")
+                        
+                        # Generate HTML button
+                        if st.button("Generate HTML", key="generate_html_btn"):
+                            if page_type and site_name:
+                                try:
+                                    debug_print("Creating CSV data...")
+                                    # Create CSV data
+                                    csv_data = {
+                                        'TITLE': [st.session_state.edited_seo.get('title', '')],
+                                        'META_DESC': [st.session_state.edited_seo.get('meta_description', '')],
+                                        'FAQ_SCHEMA': [json.dumps(st.session_state.edited_seo.get('schema', {}))],
+                                        'CONTENT': [st.session_state.edited_content],
+                                        'H2': [site_name]
+                                    }
+                                    
+                                    debug_print("Creating temporary CSV file...")
+                                    # Create temporary CSV file
+                                    temp_csv = StringIO()
+                                    pd.DataFrame(csv_data).to_csv(temp_csv, index=False)
+                                    temp_csv.seek(0)
+                                    
+                                    debug_print(f"CSV Content: {temp_csv.getvalue()}")
+                                    
+                                    debug_print("Calling generate_filled_html...")
+                                    # Generate the HTML
+                                    generate_filled_html(temp_csv.getvalue(), site_name.lower())
+                                    
+                                    debug_print("Reading generated HTML...")
+                                    # Read the generated HTML file
+                                    output_filename = f"{site_name.lower()}.html"
+                                    if os.path.exists(output_filename):
+                                        with open(output_filename, 'r', encoding='utf-8') as f:
+                                            html_content = f.read()
+                                        
+                                        debug_print("Creating download button...")
+                                        # Create download button
+                                        st.download_button(
+                                            "📥 Download Generated HTML",
+                                            html_content,
+                                            f"{site_name.lower()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html",
+                                            "text/html"
+                                        )
+                                        
+                                        # Clean up
+                                        os.remove(output_filename)
+                                        st.success("HTML generated successfully!")
+                                    else:
+                                        st.error(f"Output file {output_filename} was not created")
+                                        
+                                except Exception as e:
+                                    st.error(f"Error generating HTML: {str(e)}")
+                                    debug_print(traceback.format_exc())
+                            else:
+                                st.warning("Please select a page type and enter a site name.")
+                    except Exception as e:
+                        st.error(f"Error in HTML generation section: {str(e)}")
+                        debug_print(traceback.format_exc())
 if __name__ == "__main__":
     main()
 
