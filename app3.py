@@ -555,13 +555,14 @@ def format_meta_tags(meta_tags_str):
 def generate_filled_html(content, location):
     """
     Generates an HTML file filled with content from a CSV file for a specific location.
+    Now raises exceptions instead of terminating and returns both filename and HTML content.
 
     Args:
         content (str): The name of the CSV file containing the content.
-        location (str): The location (e.g., 'astoria', 'williamsburg') for which to generate the HTML.
+        location (str): The location for which to generate the HTML.
 
     Returns:
-        None
+        tuple: (filename, html_content) - Name of the generated HTML file and its content
     """
     
     csv_file = content
@@ -581,9 +582,8 @@ def generate_filled_html(content, location):
     if location not in html_names:
         log_and_terminate(f"Invalid location: {location}")
 
-    html_template_file = location + '-template.html'  # Construct the template file name
+    html_template_file = location + '-template.html'
     saving_name = location + '.html'
-    
     
     cell_mapping = {
         "TITLE": (2,1),
@@ -593,31 +593,42 @@ def generate_filled_html(content, location):
         "H2": (2,6)
     }
 
-    # 1. Read data from the CSV file using a modified read_excel_data (now read_csv_data)
-    data = read_csv_data(csv_file, cell_mapping)
+    try:
+        # 1. Read data from the CSV file
+        data = read_csv_data(csv_file, cell_mapping)
+        log_message("Successfully read CSV data")
 
-    # 2. Load the HTML template
-    template = load_html_template(html_template_file)
+        # 2. Load the HTML template
+        if not os.path.exists(html_template_file):
+            log_and_terminate(f"HTML template file '{html_template_file}' does not exist.")
 
-    # 3. Replace content in the template
-    final_html = replace_segment_in_html(template, '<title>', '</title>','<title>'+data['TITLE']+'</title>')
-    final_html = replace_segment_in_html(final_html, '<meta', '"viewport"/>','<meta name="viewport" content="width=device-width, initial-scale=1"/>', start_occurrence=2)
-    final_html = replace_segment_in_html(final_html, '<meta', '"description"/>','<meta name=description content="'+data['META_DESC']+'"/>', start_occurrence=3)
-    data['FAQ_SCHEMA'] = format_meta_tags(data['FAQ_SCHEMA'])
-    final_html = replace_segment_in_html(final_html, "<script type=", "</script>",data['FAQ_SCHEMA'])
-    data['CONTENT'] = markdown_to_html(data['CONTENT'])
-    final_html = replace_segment_in_html(final_html, '<div class="frame-1000004889">', '</div>', '<section class="main-content">\n'+data['CONTENT']+'\n</section>', end_occurrence=3)
-    final_html = replace_segment_in_html(final_html, '<h1>', '</h1>','<h2>'+data['H2']+'</h2>', start_occurrence=1)
-    final_html = replace_segment_in_html(final_html, '<h1>', '</h1>','<h2>'+data['H2']+'</h2>', start_occurrence=1)
+        with open(html_template_file, 'r', encoding='utf-8') as f:
+            template = f.read()
+        log_message(f"Successfully loaded HTML template '{html_template_file}'.")
 
+        # 3. Replace content in the template
+        final_html = replace_segment_in_html(template, '<title>', '</title>','<title>'+data['TITLE']+'</title>')
+        final_html = replace_segment_in_html(final_html, '<meta', '"viewport"/>','<meta name="viewport" content="width=device-width, initial-scale=1"/>', start_occurrence=2)
+        final_html = replace_segment_in_html(final_html, '<meta', '"description"/>','<meta name=description content="'+data['META_DESC']+'"/>', start_occurrence=3)
+        data['FAQ_SCHEMA'] = format_meta_tags(data['FAQ_SCHEMA'])
+        final_html = replace_segment_in_html(final_html, "<script type=", "</script>",data['FAQ_SCHEMA'])
+        data['CONTENT'] = markdown_to_html(data['CONTENT'])
+        final_html = replace_segment_in_html(final_html, '<div class="frame-1000004889">', '</div>', '<section class="main-content">\n'+data['CONTENT']+'\n</section>', end_occurrence=3)
+        final_html = replace_segment_in_html(final_html, '<h1>', '</h1>','<h2>'+data['H2']+'</h2>', start_occurrence=1)
+        final_html = replace_segment_in_html(final_html, '<h1>', '</h1>','<h2>'+data['H2']+'</h2>', start_occurrence=1)
 
-    # 4. Save the updated HTML
-    x= save_html_content(saving_name, final_html)
-    return x
-    log_message(f"Successfully generated HTML for {location} from {csv_file}")
-  
-    
+        # 4. Save the updated HTML
+        try:
+            with open(saving_name, 'w', encoding='utf-8') as f:
+                f.write(final_html)
+            log_message(f"Successfully saved updated HTML to '{saving_name}'.")
+        except Exception as e:
+            log_and_terminate(f"Failed to write updated HTML to '{saving_name}': {e}")
 
+        return saving_name, final_html  # Return both the filename and the HTML content
+
+    except Exception as e:
+        log_and_terminate(f"Error in generate_filled_html: {str(e)}")
 #Example Usage
 #content_file_name = 'content.csv'
 #location = 'astoria'
@@ -1411,74 +1422,74 @@ def main():
                 
                 with st.expander("🌐 Generate HTML"):
                     try:
-                        # Single option dropdown for service page
+        # Single option dropdown for service page
                         page_type = st.selectbox(
-                            "Select Page Type",
-                            options=['service page'],
-                            key="page_type_select"
-                        )
-                        
-                        # Site name input
+            "Select Page Type",
+            options=['service page'],
+            key="page_type_select"
+        )
+        
+        # Site name input
                         site_name = st.text_input(
-                            "Enter Site Name",
-                            key="site_name_input"
-                        )
-                        
+            "Enter Site Name",
+            key="site_name_input"
+        )
+        
                         debug_print(f"Page Type: {page_type}")
                         debug_print(f"Site Name: {site_name}")
-                        
-                        # Generate HTML button
+        
+        # Generate HTML button
                         if st.button("Generate HTML", key="generate_html_btn"):
                             if page_type and site_name:
                                 try:
                                     debug_print("Creating CSV data...")
-                                    # Create CSV data
+                    # Create CSV data
                                     csv_data = {
-                                        'TITLE': [st.session_state.edited_seo.get('title', '')],
-                                        'META_DESC': [st.session_state.edited_seo.get('meta_description', '')],
-                                        'FAQ_SCHEMA': [json.dumps(st.session_state.edited_seo.get('schema', {}))],
-                                        'CONTENT': [st.session_state.edited_content],
-                                        'H2': [site_name]
-                                    }
-                                    
-                                    # Create a temporary CSV file
+                        'TITLE': [st.session_state.edited_seo.get('title', '')],
+                        'META_DESC': [st.session_state.edited_seo.get('meta_description', '')],
+                        'FAQ_SCHEMA': [json.dumps(st.session_state.edited_seo.get('schema', {}))],
+                        'CONTENT': [st.session_state.edited_content],
+                        'H2': [site_name]
+                    }
+                    
+                    # Create a temporary CSV file
                                     with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.csv', newline='') as temp_csv:
                                         debug_print(f"Created temporary file: {temp_csv.name}")
                                         pd.DataFrame(csv_data).to_csv(temp_csv.name, index=False)
-                                    
+                    
                                     debug_print("Calling generate_filled_html...")
-                                    # Generate the HTML
+                    # Generate the HTML
                                     template_name = site_name.lower()
                                     generate_filled_html(temp_csv.name, template_name)
-                                    
+                    
                                     debug_print("Reading generated HTML...")
-                                    # Read the generated HTML file
+                    # Read the generated HTML file
                                     output_filename = f"{template_name}.html"
                                     if os.path.exists(output_filename):
                                         with open(output_filename, 'r', encoding='utf-8') as f:
                                             html_content = f.read()
-                                        
+                        
                                         debug_print("Creating download button...")
-                                        # Create download button
+                        # Create download button
                                         st.download_button(
-                                            "📥 Download Generated HTML",
-                                            html_content,
-                                            f"{template_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html",
-                                            "text/html"
-                                        )
-                                        
-                                        # Clean up
+                            "📥 Download Generated HTML",
+                            html_content,
+                            f"{template_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html",
+                            "text/html"
+                        )
+                        
+                        # Clean up
                                         os.remove(output_filename)
                                         os.remove(temp_csv.name)
                                         st.success("HTML generated successfully!")
                                     else:
                                         st.error(f"Output file {output_filename} was not created")
-                                        
+                        
                                 except Exception as e:
                                     st.error(f"Error generating HTML: {str(e)}")
                                     st.write(traceback.format_exc())
                                 finally:
-                                    # Ensure temporary file is cleaned up
+                    # Ensure temporary file is cleaned up
                                     if 'temp_csv' in locals() and os.path.exists(temp_csv.name):
                                         os.remove(temp_csv.name)
                             else:
