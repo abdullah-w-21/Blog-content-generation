@@ -12,6 +12,12 @@ from io import BytesIO
 from langchain_openai import ChatOpenAI
 from datetime import datetime
 import zipfile
+import pandas as pd
+from io import BytesIO
+from datetime import datetime
+import os
+from automation import generate_filled_html
+
 
 # Session state initialization
 if 'template_text' not in st.session_state:
@@ -28,6 +34,11 @@ if 'additional_keywords_list' not in st.session_state:
     st.session_state.additional_keywords_list = None
 if 'generation_content' not in st.session_state:
     st.session_state.generation_content = None
+# Added
+if 'page_type' not in st.session_state:
+    st.session_state.page_type = None
+if 'site_name' not in st.session_state:
+    st.session_state.site_name = None
 
 
 def configure_openai():
@@ -774,7 +785,63 @@ def main():
                                            csv_buffer.getvalue(),
                                            f"metadata_{timestamp}.csv",
                                            "text/csv")
-
+                with st.expander("🌐 Generate HTML"):
+                # Single option dropdown for service page
+                page_type = st.selectbox(
+                    "Select Page Type",
+                    options=['service page'],
+                    key="page_type_select"
+                )
+                
+                # Site name input
+                site_name = st.text_input(
+                    "Enter Site Name",
+                    key="site_name_input"
+                )
+                
+                # Generate HTML button
+                if st.button("Generate HTML", key="generate_html_btn"):
+                    if page_type and site_name:
+                        try:
+                            # Create a temporary CSV file with the required data
+                            csv_data = {
+                                'TITLE': [st.session_state.edited_seo.get('title', '')],
+                                'META_DESC': [st.session_state.edited_seo.get('meta_description', '')],
+                                'FAQ_SCHEMA': [json.dumps(st.session_state.edited_seo.get('schema', {}))],
+                                'CONTENT': [st.session_state.edited_content],
+                                'H2': [site_name]  # Using site_name as H2
+                            }
+                            
+                            temp_csv = BytesIO()
+                            pd.DataFrame(csv_data).to_csv(temp_csv, index=False)
+                            temp_csv.seek(0)
+                            
+                            # Generate the HTML using the site name
+                            generate_filled_html(temp_csv, site_name.lower())
+                            
+                            # Read the generated HTML file
+                            with open(f"{site_name.lower()}.html", 'r', encoding='utf-8') as f:
+                                html_content = f.read()
+                            
+                            # Create download button for the HTML
+                            st.download_button(
+                                "📥 Download Generated HTML",
+                                html_content,
+                                f"{site_name.lower()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html",
+                                "text/html"
+                            )
+                            
+                            # Clean up the generated file
+                            os.remove(f"{site_name.lower()}.html")
+                            
+                            st.success("HTML generated successfully!")
+                            
+                        except Exception as e:
+                            st.error(f"Error generating HTML: {str(e)}")
+                    else:
+                        st.warning("Please select a page type and enter a site name.")
 
 if __name__ == "__main__":
     main()
+
+
