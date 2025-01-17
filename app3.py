@@ -11,6 +11,7 @@ from textwrap import dedent
 from langchain_openai import ChatOpenAI
 from datetime import datetime
 import zipfile
+import tempfile
 import pandas as pd
 from io import BytesIO, StringIO
 import traceback
@@ -822,21 +823,19 @@ def main():
                                         'H2': [site_name]
                                     }
                                     
-                                    debug_print("Creating temporary CSV file...")
-                                    # Create temporary CSV file
-                                    temp_csv = StringIO()
-                                    pd.DataFrame(csv_data).to_csv(temp_csv, index=False)
-                                    temp_csv.seek(0)
-                                    
-                                    debug_print(f"CSV Content: {temp_csv.getvalue()}")
+                                    # Create a temporary CSV file
+                                    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.csv', newline='') as temp_csv:
+                                        debug_print(f"Created temporary file: {temp_csv.name}")
+                                        pd.DataFrame(csv_data).to_csv(temp_csv.name, index=False)
                                     
                                     debug_print("Calling generate_filled_html...")
                                     # Generate the HTML
-                                    generate_filled_html(temp_csv.getvalue(), site_name.lower())
+                                    template_name = site_name.lower()
+                                    generate_filled_html(temp_csv.name, template_name)
                                     
                                     debug_print("Reading generated HTML...")
                                     # Read the generated HTML file
-                                    output_filename = f"{site_name.lower()}.html"
+                                    output_filename = f"{template_name}.html"
                                     if os.path.exists(output_filename):
                                         with open(output_filename, 'r', encoding='utf-8') as f:
                                             html_content = f.read()
@@ -846,12 +845,13 @@ def main():
                                         st.download_button(
                                             "📥 Download Generated HTML",
                                             html_content,
-                                            f"{site_name.lower()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html",
+                                            f"{template_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html",
                                             "text/html"
                                         )
                                         
                                         # Clean up
                                         os.remove(output_filename)
+                                        os.remove(temp_csv.name)
                                         st.success("HTML generated successfully!")
                                     else:
                                         st.error(f"Output file {output_filename} was not created")
@@ -859,6 +859,10 @@ def main():
                                 except Exception as e:
                                     st.error(f"Error generating HTML: {str(e)}")
                                     st.write(traceback.format_exc())
+                                finally:
+                                    # Ensure temporary file is cleaned up
+                                    if 'temp_csv' in locals() and os.path.exists(temp_csv.name):
+                                        os.remove(temp_csv.name)
                             else:
                                 st.warning("Please select a page type and enter a site name.")
                     except Exception as e:
