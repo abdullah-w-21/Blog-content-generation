@@ -39,7 +39,9 @@ if 'page_type' not in st.session_state:
     st.session_state.page_type = None
 if 'site_name' not in st.session_state:
     st.session_state.site_name = None
-
+def debug_print(message):
+    """Print debug messages in Streamlit"""
+    st.write(f"Debug: {message}")
 
 def configure_openai():
     api_key = st.sidebar.text_input("Enter OpenAI API Key", type="password")
