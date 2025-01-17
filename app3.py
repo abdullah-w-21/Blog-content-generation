@@ -612,10 +612,11 @@ def generate_filled_html(content, location):
 
 
     # 4. Save the updated HTML
-    save_html_content(saving_name, final_html)
+    x= save_html_content(saving_name, final_html)
+    return x
     log_message(f"Successfully generated HTML for {location} from {csv_file}")
   
-
+    
 
 #Example Usage
 #content_file_name = 'content.csv'
@@ -1409,40 +1410,29 @@ def main():
                                            "text/csv")
                 
                 with st.expander("🌐 Generate HTML"):
-                    # Check for templates at the start
-                    st.write("Checking for template files...")
-                    available_templates = check_templates()
-                    
-                    if not available_templates:
-                        st.error("No template files found! Please ensure template files (e.g., astoria-template.html) are in the correct directory.")
-                        return
-                        
                     try:
+                        # Single option dropdown for service page
                         page_type = st.selectbox(
                             "Select Page Type",
                             options=['service page'],
                             key="page_type_select"
                         )
                         
-                        # Show available templates
-                        st.info(f"Available templates: {', '.join(available_templates)}")
-                        
+                        # Site name input
                         site_name = st.text_input(
                             "Enter Site Name",
-                            key="site_name_input",
-                            help=f"Available templates: {', '.join([t.replace('-template.html', '') for t in available_templates])}"
+                            key="site_name_input"
                         )
                         
-                        if site_name:
-                            template_file = f"{site_name.lower()}-template.html"
-                            if not template_file in available_templates:
-                                st.error(f"Template file '{template_file}' not found. Please choose from available templates.")
-                                return
+                        debug_print(f"Page Type: {page_type}")
+                        debug_print(f"Site Name: {site_name}")
                         
+                        # Generate HTML button
                         if st.button("Generate HTML", key="generate_html_btn"):
                             if page_type and site_name:
                                 try:
                                     debug_print("Creating CSV data...")
+                                    # Create CSV data
                                     csv_data = {
                                         'TITLE': [st.session_state.edited_seo.get('title', '')],
                                         'META_DESC': [st.session_state.edited_seo.get('meta_description', '')],
@@ -1451,23 +1441,25 @@ def main():
                                         'H2': [site_name]
                                     }
                                     
-                                    # Create and save temporary CSV file
-                                    df = pd.DataFrame(csv_data)
-                                    temp_csv_path = os.path.join(os.getcwd(), 'temp.csv')
-                                    df.to_csv(temp_csv_path, index=False)
-                                    debug_print(f"Saved CSV to: {temp_csv_path}")
-                                    debug_print(f"CSV exists: {os.path.exists(temp_csv_path)}")
-                                    debug_print(f"CSV content preview: \n{df.head()}")
+                                    # Create a temporary CSV file
+                                    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.csv', newline='') as temp_csv:
+                                        debug_print(f"Created temporary file: {temp_csv.name}")
+                                        pd.DataFrame(csv_data).to_csv(temp_csv.name, index=False)
                                     
                                     debug_print("Calling generate_filled_html...")
+                                    # Generate the HTML
                                     template_name = site_name.lower()
-                                    generate_filled_html(temp_csv_path, template_name)
+                                    generate_filled_html(temp_csv.name, template_name)
                                     
+                                    debug_print("Reading generated HTML...")
+                                    # Read the generated HTML file
                                     output_filename = f"{template_name}.html"
                                     if os.path.exists(output_filename):
                                         with open(output_filename, 'r', encoding='utf-8') as f:
                                             html_content = f.read()
                                         
+                                        debug_print("Creating download button...")
+                                        # Create download button
                                         st.download_button(
                                             "📥 Download Generated HTML",
                                             html_content,
@@ -1477,7 +1469,7 @@ def main():
                                         
                                         # Clean up
                                         os.remove(output_filename)
-                                        os.remove(temp_csv_path)
+                                        os.remove(temp_csv.name)
                                         st.success("HTML generated successfully!")
                                     else:
                                         st.error(f"Output file {output_filename} was not created")
@@ -1485,8 +1477,10 @@ def main():
                                 except Exception as e:
                                     st.error(f"Error generating HTML: {str(e)}")
                                     st.write(traceback.format_exc())
-                                    if os.path.exists(temp_csv_path):
-                                        os.remove(temp_csv_path)
+                                finally:
+                                    # Ensure temporary file is cleaned up
+                                    if 'temp_csv' in locals() and os.path.exists(temp_csv.name):
+                                        os.remove(temp_csv.name)
                             else:
                                 st.warning("Please select a page type and enter a site name.")
                     except Exception as e:
