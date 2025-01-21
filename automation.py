@@ -10,43 +10,51 @@ import json
 
 LOG_FILENAME = "processing_log.txt"
 
+
 def log_message(message):
     """Append a message to the log file."""
     with open(LOG_FILENAME, "a", encoding="utf-8") as f:
         f.write(message + "\n")
+
 
 def log_and_terminate(message):
     """Log an error message and terminate the script."""
     log_message("ERROR: " + message)
     sys.exit(1)
 
-def read_csv_data(csv_file, cell_mapping):
+
+def read_csv_data(csv_file, cell_mapping, delimiter=",", header=0):
     """
-    Reads arbitrary cells from an Excel sheet according to the cell_mapping dictionary.
-    If the file cannot be opened or sheet not found, terminate.
+    Reads data from a CSV file using the specified cell mapping.
+    If the file cannot be opened, terminate.
     If any cell is empty, terminate.
-    Note: using 1-based indexing as per previous user requirements.
+
+    Args:
+        csv_file (str): Path to the CSV file.
+        cell_mapping (dict): Dictionary mapping data names to column names.
+        delimiter (str, optional): Delimiter used in the CSV file (default ',').
+        header (int or None, optional): Row number to use as header (default 0).
+
+    Returns:
+        dict: Dictionary containing the data extracted from the CSV file.
     """
     try:
-        df = pd.read_csv(csv_file, header=None)
+        df = pd.read_csv(csv_file, delimiter=delimiter, header=header)
     except Exception as e:
         log_and_terminate(f"Failed to open CSV file '{csv_file}': {e}")
 
     data = {}
-    for key, (r, c) in cell_mapping.items():
-        # Convert to 0-based indexing for df
-        row_idx = r - 1
-        col_idx = c - 1
-        if row_idx >= df.shape[0] or col_idx >= df.shape[1]:
-            log_and_terminate(f"Cell for '{key}' is out of range in Excel file.")
-
-        val = df.iloc[row_idx, col_idx]
+    for key, col_name in cell_mapping.items():
+        val = df[col_name].iloc[0]  # Access the first row (index 0) of the column
         if pd.isna(val) or str(val).strip() == "":
-            log_and_terminate(f"Cell for '{key}' at row {r}, col {c} is empty. Cannot proceed.")
+            log_and_terminate(
+                f"Cell for '{key}' in column '{col_name}' is empty. Cannot proceed."
+            )
         data[key] = str(val).strip()
 
     log_message(f"Successfully read data from CSV file '{csv_file}'")
     return data
+
 
 def find_nth_occurrence(content, substring, n):
     """
@@ -64,27 +72,45 @@ def find_nth_occurrence(content, substring, n):
             return index
         start = index + len(substring)
 
-def replace_segment_in_html(html_content, search_start_marker, search_end_marker, replacement_text,
-                            start_occurrence=1, end_occurrence=1):
+
+def replace_segment_in_html(
+    html_content,
+    search_start_marker,
+    search_end_marker,
+    replacement_text,
+    start_occurrence=1,
+    end_occurrence=1,
+):
     """
     Finds the nth occurrence of search_start_marker and nth occurrence of search_end_marker in html_content
     and replaces everything from search_start_marker to search_end_marker (inclusive) with replacement_text.
     If occurrences are not found, terminate.
     """
-    start_index = find_nth_occurrence(html_content, search_start_marker, start_occurrence)
+    start_index = find_nth_occurrence(
+        html_content, search_start_marker, start_occurrence
+    )
     if start_index == -1:
-        log_and_terminate(f"Search start marker '{search_start_marker}' (occurrence {start_occurrence}) not found in HTML.")
+        log_and_terminate(
+            f"Search start marker '{search_start_marker}' (occurrence {start_occurrence}) not found in HTML."
+        )
 
-    end_index = find_nth_occurrence(html_content[start_index+len(search_start_marker):], search_end_marker, end_occurrence)
+    end_index = find_nth_occurrence(
+        html_content[start_index + len(search_start_marker) :],
+        search_end_marker,
+        end_occurrence,
+    )
     if end_index == -1:
-        log_and_terminate(f"Search end marker '{search_end_marker}' (occurrence {end_occurrence}) not found in HTML after start marker '{search_start_marker}'.")
+        log_and_terminate(
+            f"Search end marker '{search_end_marker}' (occurrence {end_occurrence}) not found in HTML after start marker '{search_start_marker}'."
+        )
 
     # Adjust end_index relative to the whole string
     end_index = start_index + len(search_start_marker) + end_index
 
     before = html_content[:start_index]
-    after = html_content[end_index + len(search_end_marker):]
+    after = html_content[end_index + len(search_end_marker) :]
     return before + replacement_text + after
+
 
 def load_html_template(file_path):
     """Load the HTML template file. If fails, terminate."""
@@ -92,21 +118,23 @@ def load_html_template(file_path):
         log_and_terminate(f"HTML template file '{file_path}' does not exist.")
 
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
         log_message(f"Successfully loaded HTML template '{file_path}'.")
         return content
     except Exception as e:
         log_and_terminate(f"Failed to read HTML template '{file_path}': {e}")
 
+
 def save_html_content(file_path, content):
     """Save the updated HTML content to a file."""
     try:
-        with open(file_path, 'w', encoding='utf-8') as f:
+        with open(file_path, "w", encoding="utf-8") as f:
             f.write(content)
         log_message(f"Successfully saved updated HTML to '{file_path}'.")
     except Exception as e:
         log_and_terminate(f"Failed to write updated HTML to '{file_path}': {e}")
+
 
 def update_html_content(html_content, data, replacements_config):
     """
@@ -148,13 +176,18 @@ def update_html_content(html_content, data, replacements_config):
             search_end_marker,
             replacement_text,
             start_occurrence=start_occ,
-            end_occurrence=end_occ
+            end_occurrence=end_occ,
         )
 
-        log_message(f"Successfully replaced segment for '{key}' with '{replacement_text}'.")
+        log_message(
+            f"Successfully replaced segment for '{key}' with '{replacement_text}'."
+        )
     return updated_content
 
-def process_html_template(html_file, excel_file, sheet_name, cell_mapping, replacements_config, in_place=True):
+
+def process_html_template(
+    html_file, excel_file, sheet_name, cell_mapping, replacements_config, in_place=True
+):
     """
     Process a single HTML template and update based on Excel data.
     The script will terminate on any error.
@@ -172,12 +205,9 @@ def process_html_template(html_file, excel_file, sheet_name, cell_mapping, repla
     save_html_content(output_file, updated_content)
     log_message("All operations completed successfully.")
 
+
 def docx_to_html_with_docx2python(
-    docx_path,
-    entire_start="",
-    entire_end="",
-    p_start="<p>",
-    p_end="</p>"
+    docx_path, entire_start="", entire_end="", p_start="<p>", p_end="</p>"
 ):
     """
     Converts a DOCX file into HTML with:
@@ -286,20 +316,22 @@ def docx_to_html_with_docx2python(
                 item_content = re.sub(r"^[0-9]+[\.\)]\s?", "", line_stripped)
 
             # Escape HTML special chars in content
-            item_content = (item_content
-                            .replace("&", "&amp;")
-                            .replace("<", "&lt;")
-                            .replace(">", "&gt;"))
+            item_content = (
+                item_content.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+            )
 
             html_fragments.append(f"<li>{item_content}</li>")
 
         else:
             # Not a list item, close all lists and add a paragraph
             close_all_lists()
-            paragraph_content = (paragraph
-                                 .replace("&", "&amp;")
-                                 .replace("<", "&lt;")
-                                 .replace(">", "&gt;"))
+            paragraph_content = (
+                paragraph.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+            )
             html_fragments.append(f"{p_start}{paragraph_content}{p_end}")
 
     # Close any remaining lists
@@ -309,7 +341,6 @@ def docx_to_html_with_docx2python(
         html_fragments.append(entire_end)
 
     return "\n".join(html_fragments)
-
 
 
 def replace_all_markers_in_html(html_content, markers):
@@ -335,25 +366,27 @@ def replace_all_markers_in_html(html_content, markers):
             if start_idx == -1:
                 # No more start markers; move to the next marker pair
                 break
-            
+
             # Look for the next end marker after the start marker
             end_idx = updated_html.find(end_marker, start_idx + len(start_marker))
             if end_idx == -1:
                 # No matching end marker; stop processing this pair
-                log_message(f"Unmatched start marker '{start_marker}' found without corresponding end marker '{end_marker}'.")
+                log_message(
+                    f"Unmatched start marker '{start_marker}' found without corresponding end marker '{end_marker}'."
+                )
                 break
 
             # Extract the content between start and end markers
-            inner_content = updated_html[start_idx + len(start_marker):end_idx]
+            inner_content = updated_html[start_idx + len(start_marker) : end_idx]
 
             # Build the replacement with the tags
             replacement = f"{start_tag}{inner_content}{end_tag}"
 
             # Replace the segment (including start and end markers) with the replacement
             updated_html = (
-                updated_html[:start_idx] +
-                replacement +
-                updated_html[end_idx + len(end_marker):]
+                updated_html[:start_idx]
+                + replacement
+                + updated_html[end_idx + len(end_marker) :]
             )
 
     return updated_html
@@ -378,6 +411,7 @@ def process_preliminary_html(preliminary_html, markers):
     processed_html = replace_all_markers_in_html(preliminary_html, markers)
     log_message("Successfully processed preliminary HTML.")
     return processed_html
+
 
 def preprocess_bold_text(docx_path, output_path):
     """
@@ -407,10 +441,11 @@ def preprocess_bold_text(docx_path, output_path):
     doc.save(output_path)
     print(f"Processed document saved to: {output_path}")
 
+
 def markdown_to_html(markdown_text):
     """
-    Converts Markdown text to HTML, handling headings, bullet points, 
-    numbered lists, bold text, and paragraphs (including multiple paragraphs 
+    Converts Markdown text to HTML, handling headings, bullet points,
+    numbered lists, bold text, and paragraphs (including multiple paragraphs
     and paragraphs ending at the end of lines or within a line).
 
     Args:
@@ -427,112 +462,116 @@ def markdown_to_html(markdown_text):
     def close_paragraph():
         nonlocal in_paragraph
         if in_paragraph:
-            html_lines.append('</p>')
+            html_lines.append("</p>")
             in_paragraph = False
 
     def close_list():
         nonlocal in_list, in_ordered_list
         if in_list:
-            html_lines.append('</ul>')
+            html_lines.append("</ul>")
             in_list = False
         if in_ordered_list:
-            html_lines.append('</ol>')
+            html_lines.append("</ol>")
             in_ordered_list = False
 
     for line in markdown_text.splitlines():
         line = line.strip()
 
         # Handle headings
-        if line.startswith('#'):
+        if line.startswith("#"):
             close_paragraph()
             close_list()
-            match = re.match(r'(#+)\s*(H\d)?(:\s*)?(.*)', line)
+            match = re.match(r"(#+)\s*(H\d)?(:\s*)?(.*)", line)
             if match:
                 level = len(match.group(1))
                 text = match.group(4).strip()
                 if 1 <= level <= 6:
-                    html_lines.append(f'<h{level}>{text}</h{level}>')
+                    html_lines.append(f"<h{level}>{text}</h{level}>")
             continue
 
         # Handle bullet points (unordered lists)
-        if line.startswith('- '):
+        if line.startswith("- "):
             close_paragraph()
             if not in_list:
                 html_lines.append('<ul class="list" role="list">')
                 in_list = True
             text = line[2:].strip()
-            text = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', text)
-            html_lines.append(f'  <li>{text}</li>')
+            text = re.sub(r"\*\*(.*?)\*\*", r"<strong>\1</strong>", text)
+            html_lines.append(f"  <li>{text}</li>")
             continue
         else:
             if in_list:
-                html_lines.append('</ul>')
+                html_lines.append("</ul>")
                 in_list = False
 
         # Handle numbered lists (ordered lists)
-        if re.match(r'\d+\.\s', line):
+        if re.match(r"\d+\.\s", line):
             close_paragraph()
             if not in_ordered_list:
                 html_lines.append('<ol class="list" role="list">')
                 in_ordered_list = True
-            text = line.split('. ', 1)[1].strip()
-            text = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', text)
-            html_lines.append(f'<li>{text}</li>')
+            text = line.split(". ", 1)[1].strip()
+            text = re.sub(r"\*\*(.*?)\*\*", r"<strong>\1</strong>", text)
+            html_lines.append(f"<li>{text}</li>")
             continue
         else:
             if in_ordered_list:
-                html_lines.append('</ol>')
+                html_lines.append("</ol>")
                 in_ordered_list = False
 
         # Handle paragraphs (with line break detection within paragraphs)
         if not in_paragraph:
-            html_lines.append('<p>')
+            html_lines.append("<p>")
             in_paragraph = True
 
         # Split the line by newline characters to handle paragraph breaks within lines
-        sublines = line.split('\n')  
+        sublines = line.split("\n")
 
         for subline in sublines:
             subline = subline.strip()
             if subline:
                 # Apply bold formatting using regular expressions
-                subline = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', subline)  
+                subline = re.sub(r"\*\*(.*?)\*\*", r"<strong>\1</strong>", subline)
 
                 html_lines.append(subline)
                 close_paragraph()  # Close the paragraph after each subline
-                if subline != sublines[-1]:  # Don't open a new paragraph if it's the last subline
-                    html_lines.append('<p>')
+                if (
+                    subline != sublines[-1]
+                ):  # Don't open a new paragraph if it's the last subline
+                    html_lines.append("<p>")
                     in_paragraph = True
 
     # Close any open elements at the end
     close_paragraph()
     close_list()
 
-    return '\n'.join(html_lines)
+    return "\n".join(html_lines)
+
 
 def format_meta_tags(meta_tags_str):
-  """
-  Converts a JSON string of meta tags into HTML meta tag strings.
+    """
+    Converts a JSON string of meta tags into HTML meta tag strings.
 
-  Args:
-    meta_tags_str: A JSON string containing meta tag information.
-                   The JSON object should have a "raw_schema" key containing 
-                   the HTML code snippet with the meta tags.
+    Args:
+      meta_tags_str: A JSON string containing meta tag information.
+                     The JSON object should have a "raw_schema" key containing
+                     the HTML code snippet with the meta tags.
 
-  Returns:
-    A string containing the formatted HTML meta tags with "```html" 
-    and "```" removed.
-  """
+    Returns:
+      A string containing the formatted HTML meta tags with "```html"
+      and "```" removed.
+    """
 
-  try:
-    meta_tags_dict = json.loads(meta_tags_str)
-    html_code = meta_tags_dict["raw_schema"] 
-    # Remove "```html" from the beginning and "```" from the end
-    html_code = html_code.replace("```html\n", "").replace("```", "")  
-    return html_code
-  except (json.JSONDecodeError, KeyError) as e:
-    return f"Error: {e}"
-  
+    try:
+        meta_tags_dict = json.loads(meta_tags_str)
+        html_code = meta_tags_dict["raw_schema"]
+        # Remove "```html" from the beginning and "```" from the end
+        html_code = html_code.replace("```html\n", "").replace("```", "")
+        return html_code
+    except (json.JSONDecodeError, KeyError) as e:
+        return f"Error: {e}"
+
+
 def generate_filled_html(content, location):
     """
     Generates an HTML file filled with content from a CSV file for a specific location.
@@ -544,34 +583,35 @@ def generate_filled_html(content, location):
     Returns:
         None
     """
-    
+
     csv_file = content
-    
-    html_names = ['astoria', 
-                  'williamsburg', 
-                  'hicksville', 
-                  '174th-street', 
-                  'jackson-heights', 
-                  'bartow-mall', 
-                  'jamaica', 
-                  'stuytown', 
-                  'crown-heights', 
-                  'mineola', 
-                  'long-island-city']
-    
+
+    html_names = [
+        "astoria",
+        "williamsburg",
+        "hicksville",
+        "174th-street",
+        "jackson-heights",
+        "bartow-mall",
+        "jamaica",
+        "stuytown",
+        "crown-heights",
+        "mineola",
+        "long-island-city",
+    ]
+
     if location not in html_names:
         log_and_terminate(f"Invalid location: {location}")
 
-    html_template_file = location + '-template.html'  # Construct the template file name
-    saving_name = location + '.html'
-    
-    
+    html_template_file = location + "-template.html"  # Construct the template file name
+    saving_name = location + ".html"
+
     cell_mapping = {
-        "TITLE": (2,1),
-        "META_DESC": (2,2),
-        "FAQ_SCHEMA": (2,3),
-        "CONTENT": (2,4),
-        "H2": (2,6)
+        "TITLE": "TITLE",
+        "META_DESC": "META_DESC",
+        "FAQ_SCHEMA": "FAQ_SCHEMA",
+        "CONTENT": "CONTENT",
+        "H2": "H2",
     }
 
     # 1. Read data from the CSV file using a modified read_excel_data (now read_csv_data)
@@ -581,24 +621,48 @@ def generate_filled_html(content, location):
     template = load_html_template(html_template_file)
 
     # 3. Replace content in the template
-    final_html = replace_segment_in_html(template, '<title>', '</title>','<title>'+data['TITLE']+'</title>')
-    final_html = replace_segment_in_html(final_html, '<meta', '"viewport"/>','<meta name="viewport" content="width=device-width, initial-scale=1"/>', start_occurrence=2)
-    final_html = replace_segment_in_html(final_html, '<meta', '"description"/>','<meta name=description content="'+data['META_DESC']+'"/>', start_occurrence=3)
-    data['FAQ_SCHEMA'] = format_meta_tags(data['FAQ_SCHEMA'])
-    final_html = replace_segment_in_html(final_html, "<script type=", "</script>",data['FAQ_SCHEMA'])
-    data['CONTENT'] = markdown_to_html(data['CONTENT'])
-    final_html = replace_segment_in_html(final_html, '<div class="frame-1000004889">', '</div>', '<section class="main-content">\n'+data['CONTENT']+'\n</section>', end_occurrence=3)
-    final_html = replace_segment_in_html(final_html, '<h1>', '</h1>','<h2>'+data['H2']+'</h2>', start_occurrence=1)
-    final_html = replace_segment_in_html(final_html, '<h1>', '</h1>','<h2>'+data['H2']+'</h2>', start_occurrence=1)
-
+    final_html = replace_segment_in_html(
+        template, "<title>", "</title>", "<title>" + data["TITLE"] + "</title>"
+    )
+    final_html = replace_segment_in_html(
+        final_html,
+        "<meta",
+        '"viewport"/>',
+        '<meta name="viewport" content="width=device-width, initial-scale=1"/>',
+        start_occurrence=2,
+    )
+    final_html = replace_segment_in_html(
+        final_html,
+        "<meta",
+        '"description"/>',
+        '<meta name=description content="' + data["META_DESC"] + '"/>',
+        start_occurrence=3,
+    )
+    data["FAQ_SCHEMA"] = format_meta_tags(data["FAQ_SCHEMA"])
+    final_html = replace_segment_in_html(
+        final_html, "<script type=", "</script>", data["FAQ_SCHEMA"]
+    )
+    data["CONTENT"] = markdown_to_html(data["CONTENT"])
+    final_html = replace_segment_in_html(
+        final_html,
+        '<div class="frame-1000004889">',
+        "</div>",
+        '<section class="main-content">\n' + data["CONTENT"] + "\n</section>",
+        end_occurrence=3,
+    )
+    final_html = replace_segment_in_html(
+        final_html, "<h1>", "</h1>", "<h2>" + data["H2"] + "</h2>", start_occurrence=1
+    )
+    final_html = replace_segment_in_html(
+        final_html, "<h1>", "</h1>", "<h2>" + data["H2"] + "</h2>", start_occurrence=1
+    )
 
     # 4. Save the updated HTML
     save_html_content(saving_name, final_html)
     log_message(f"Successfully generated HTML for {location} from {csv_file}")
-  
 
 
-#Example Usage
-#content_file_name = 'content.csv'
-#location = 'astoria'
-#generate_filled_html(content_file_name, location)
+# Example Usage
+# content_file_name = 'content.csv'
+# location = 'astoria'
+# generate_filled_html(content_file_name, location)
