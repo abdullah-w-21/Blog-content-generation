@@ -830,7 +830,6 @@ def main():
                             help=f"Available templates: {', '.join([t.replace('-template.html', '') for t in available_templates])}"
                         )
 
-                        h2 = st.text_input("Enter h2 heading", key="h2_heading")
                         
                         if site_name:
                             template_file = f"{site_name.lower()}-template.html"
@@ -847,7 +846,7 @@ def main():
                                         'META_DESC': [st.session_state.edited_seo.get('meta_description', '')],
                                         'FAQ_SCHEMA': [json.dumps(st.session_state.edited_seo.get('schema', {}))],
                                         'CONTENT': [st.session_state.edited_content],
-                                        'H2': [h2]
+                                        'H2': [site_name]
                                     }
                                     
                                     # Create and save temporary CSV file
